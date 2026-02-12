@@ -55,7 +55,13 @@ jobs:
           script: |
             set -euo pipefail
             cd "${{ secrets.VPS_DEPLOY_PATH }}"
+            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u "${{ secrets.GHCR_USERNAME }}" --password-stdin
             export STRAPI_IMAGE='${{ needs.build-and-push.outputs.image_tag }}'
+            if grep -q '^STRAPI_IMAGE=' .env; then
+              sed -i "s|^STRAPI_IMAGE=.*|STRAPI_IMAGE=${STRAPI_IMAGE}|" .env
+            else
+              echo "STRAPI_IMAGE=${STRAPI_IMAGE}" >> .env
+            fi
             docker compose -f docker-compose.prod.yml pull
             docker compose -f docker-compose.prod.yml up -d
             docker ps --format 'table {{.Names}}\t{{.Status}}' | grep strapi-blog-strapi-1
