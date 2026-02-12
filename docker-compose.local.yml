@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16
+    container_name: nutroteca-strapi-db-local
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-strapi}
+      POSTGRES_USER: ${DATABASE_USERNAME:-strapi}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-strapi}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USERNAME:-strapi} -d ${DATABASE_NAME:-strapi}"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  strapi:
+    build: ./app
+    container_name: nutroteca-strapi-local
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 1337
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: db
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${DATABASE_NAME:-strapi}
+      DATABASE_USERNAME: ${DATABASE_USERNAME:-strapi}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-strapi}
+      DATABASE_SSL: ${DATABASE_SSL:-false}
+    command: npm run develop
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "1337:1337"
+    volumes:
+      - ./app:/opt/app
+      - /opt/app/node_modules
+      - uploads:/opt/app/public/uploads
+
+volumes:
+  db_data:
+  uploads:
